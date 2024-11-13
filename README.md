@@ -20,10 +20,10 @@ To set up the required environment, use the provided `environment.yml` file to c
 ### 2. API Key Configuration
 
 You’ll need a Cohere API key to run this application.
-	1.	Create a .env file in the root directory of the project.
-	2.	Add your Cohere API key to the .env file in the following format:
+1.	Create a .env file in the root directory of the project.
+2.	Add your Cohere API key to the .env file in the following format:
 
-```CO_API_KEY=your_cohere_api_key_here```
+```CO_API_KEY="your_cohere_api_key_here"```
 
 
 
