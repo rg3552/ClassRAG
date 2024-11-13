@@ -39,9 +39,9 @@ def format_docs(docs):
 
 
 def setup_rag_chain(
-    persist_directory,
-    collection_name,
-    embedding_model,
+    persist_directory="./chroma_index",
+    collection_name="class_info",
+    embedding_model="sentence-transformers/all-mpnet-base-v2",
     device="cpu",
     cohere_model="command-r-plus-08-2024",
     openai_model="gpt-4o-mini",
