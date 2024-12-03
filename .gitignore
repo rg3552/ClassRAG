@@ -166,3 +166,5 @@ cython_debug/
 notebooks
 data
 chroma_index
+evaluation_data
+logs

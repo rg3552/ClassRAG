@@ -13,6 +13,7 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_unstructured import UnstructuredLoader
 from langchain_community.vectorstores.utils import filter_complex_metadata
+from codes.utils import load_embeddings, get_vector_store
 
 
 def load_txt_files(file_path, text_splitter):
@@ -39,17 +40,10 @@ def index_documents(root_dir, extensions, persist_directory):
         persist_directory (str): Directory where the Chroma index will be saved.
     """
     model_name = "sentence-transformers/all-mpnet-base-v2"
-    model_kwargs = {"device": "cpu"}
-    encode_kwargs = {"normalize_embeddings": False}
-    embeddings = HuggingFaceEmbeddings(
-        model_name=model_name, model_kwargs=model_kwargs, encode_kwargs=encode_kwargs
-    )
+    embeddings = load_embeddings(model_name)
+
     # Initialize Chroma vector store with persistence enabled
-    vector_store = Chroma(
-        collection_name="class_info",
-        embedding_function=embeddings,
-        persist_directory=persist_directory,
-    )
+    vector_store = get_vector_store(persist_directory, "class_info", embeddings)
 
     # Define chunk size and overlap
     chunk_size = 1000
