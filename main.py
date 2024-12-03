@@ -1,9 +1,10 @@
-from rag_chain import setup_rag_chain
 import streamlit as st
+from codes.rag.rag_chain import setup_rag_chain
+
+# from rag_chain import setup_rag_chain
 
 def handle_feedback(feedback, response, text_feedback):
     # Log the feedback, response, and text feedback to a file or database
-    print("in handle_feedback")
     with open("feedback.txt", "a") as f:
         f.write(f"Feedback: {feedback}\nResponse: {response}\nText Feedback: {text_feedback}\n")
 
@@ -35,9 +36,9 @@ def main():
         result = rag_chain.invoke(user_query)
         # Display assistant response in chat message container
         with st.chat_message("assistant"):
-            st.markdown(result)
+            st.markdown(result['output'])
 
-        st.session_state.messages.append({"role": "assistant", "content": result})
+        st.session_state.messages.append({"role": "assistant", "content": result['output']})
         
         # Add feedback buttons and text input
         st.markdown("*Was this response helpful?*")
