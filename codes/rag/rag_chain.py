@@ -9,7 +9,10 @@ from langchain.prompts import PromptTemplate
 from operator import itemgetter
 from ..utils import load_embeddings, get_vector_store
 import math
+from langchain_community.retrievers import BM25Retriever
+from langchain.retrievers import EnsembleRetriever
 from datetime import datetime
+from langchain.retrievers.multi_query import MultiQueryRetriever
 
 RAG_PROMPT_TEMPLATE = """
 You are a course assistant for a graduate-level course at Columbia University titled “Practical Deep Learning System Performance”. Your role is to assist students by answering their queries related to logistics and academic doubts.
@@ -32,21 +35,38 @@ Here’s the student’s query:
 {question}
 
 Relevant context chunks:  
-{context}
+{merged_context}
 
 Your response should use the above context to provide the most accurate and up-to-date answer. If the context lacks sufficient information, respond by stating that you cannot find the exact answer but guide the student on how to get it.
 """
 
 
-def initialize_retriever(persist_directory, collection_name, embeddings):
+def initialize_retriever(persist_directory, collection_name, embeddings, llm=None):
     """
     Initialize a Chroma retriever from a specified directory and embeddings model.
     """
     vector_store = get_vector_store(persist_directory, collection_name, embeddings)
-    retriever = vector_store.as_retriever(
-        search_type="mmr", search_kwargs={"k": 7, "fetch_k": 15}
+    semantic_retriever = vector_store.as_retriever(
+        search_type="mmr",
+        search_kwargs={
+            "k": 7,
+            "fetch_k": 15,
+            "filter": {"category": {"$eq": "NarrativeText"}},
+        },
     )
-    return retriever
+
+    bm_25 = BM25Retriever.from_texts(
+        vector_store.get()["documents"], metadatas=vector_store.get()["metadatas"], k=7
+    )
+    ensemble_retriever = EnsembleRetriever(
+        retrievers=[semantic_retriever, bm_25],
+        weights=[0.7, 0.3],  # you can fine-tune the weights here
+    )
+    if llm:
+        ensemble_retriever = MultiQueryRetriever.from_llm(
+            retriever=ensemble_retriever, llm=llm
+        )
+    return ensemble_retriever
 
 
 def exponential_decay(modified_date, decay_rate=0.01):
@@ -74,6 +94,8 @@ def re_rank_with_decay(retrieved_docs):
 
 
 def format_docs(docs):
+    if isinstance(docs, dict):
+        docs = docs["context"]
     formatted_docs = []
     for doc in docs:
         # Extract metadata for the document
@@ -104,27 +126,31 @@ def setup_rag_chain(
     load_dotenv()
     embeddings = load_embeddings(embedding_model)
 
-    retriever = initialize_retriever(persist_directory, collection_name, embeddings)
+    # llm = ChatCohere(model=cohere_model, temperature=0)
+    llm = ChatOpenAI(
+        model=openai_model, temperature=0, max_tokens=None, timeout=None, max_retries=2
+    )
+
+    ensemble_retriever = initialize_retriever(
+        persist_directory, collection_name, embeddings, llm
+    )
 
     # Create a PromptTemplate object
     rag_prompt = PromptTemplate(
         input_variables=[
             "question",
-            "context",
+            "merged_context",
         ],  # Variables that will be substituted in the template
         template=RAG_PROMPT_TEMPLATE,
     )
-    llm = ChatCohere(model=cohere_model, temperature=0)
-    # llm = ChatOpenAI(
-    #     model=openai_model, temperature=0, max_tokens=None, timeout=None, max_retries=2
-    # )
 
     rag_chain = (
         RunnablePassthrough()
         | {
-            "context": retriever | re_rank_with_decay | format_docs,
+            "context": ensemble_retriever | re_rank_with_decay,
             "question": RunnablePassthrough(),
         }
+        | RunnablePassthrough.assign(merged_context=format_docs)
         | {
             "output": RunnablePassthrough() | rag_prompt | llm | StrOutputParser(),
             "question": itemgetter("question"),
