@@ -11,6 +11,8 @@ from datasets import Dataset
 import argparse
 import logging
 import sys
+from langchain_openai import ChatOpenAI
+from langchain_cohere import ChatCohere
 
 
 def setup_logging():
@@ -25,7 +27,7 @@ def setup_logging():
     )
 
 
-def main(input_csv, output_csv):
+def main(input_csv, output_csv, llm=False):
     try:
         logging.info(f"Starting evaluation process with input CSV: {input_csv}")
 
@@ -46,18 +48,38 @@ def main(input_csv, output_csv):
 
         # Create a Dataset object
         eval_dataset = Dataset.from_pandas(eval_data)
-
         # Evaluate the dataset using specified metrics
         logging.info("Starting evaluation using specified metrics.")
-        result = evaluate(
-            dataset=eval_dataset,
-            metrics=[
-                context_precision,
-                context_recall,
-                faithfulness,
-                answer_relevancy,
-            ],
-        )
+        if llm:
+            # llm = ChatCohere(model="command-r-plus-08-2024", temperature=0)
+            llm = ChatOpenAI(
+                model="gpt-4o",
+                temperature=0,
+                max_tokens=None,
+                timeout=None,
+                max_retries=2,
+            )
+
+            result = evaluate(
+                dataset=eval_dataset,
+                metrics=[
+                    context_precision,
+                    context_recall,
+                    faithfulness,
+                    answer_relevancy,
+                ],
+                llm=llm,
+            )
+        else:
+            result = evaluate(
+                dataset=eval_dataset,
+                metrics=[
+                    context_precision,
+                    context_recall,
+                    faithfulness,
+                    answer_relevancy,
+                ],
+            )
         logging.info("Evaluation completed successfully.")
 
         # Convert the result to a DataFrame and save it as a CSV file
@@ -90,6 +112,12 @@ if __name__ == "__main__":
         type=str,
         default="./evaluation_data/rag_evaluation_results.csv",
         help="Path to save the output evaluation results as a CSV file.",
+    )
+    parser.add_argument(
+        "--llm",
+        type=bool,
+        default=False,
+        help="Whether to use LLM based RAGAS evaluation.",
     )
 
     args = parser.parse_args()

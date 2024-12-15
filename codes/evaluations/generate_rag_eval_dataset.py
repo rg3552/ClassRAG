@@ -70,7 +70,9 @@ def main(input_file, index_path, output_file):
             inplace=True,
         )
 
-        eval_data["contexts"] = eval_data["contexts"].str.split("\n\n")
+        eval_data["contexts"] = eval_data["contexts"].apply(
+            lambda row: [d.page_content for d in row]
+        )
 
         # Save the updated evaluation data to a CSV file
         logging.info(f"Saving processed data to {output_file}...")

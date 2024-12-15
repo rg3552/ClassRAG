@@ -10,7 +10,7 @@ from langchain_cohere import ChatCohere
 from langchain_openai import ChatOpenAI
 
 # Apply nested asyncio compatibility
-nest_asyncio.apply()
+# nest_asyncio.apply()
 
 # Define the question generation template
 QUESTION_GENERATION_TEMPLATE = """
@@ -56,55 +56,101 @@ Do not include any additional keys or information in the response.
 """
 
 
-async def generate_questions(llm, section, num_questions=3):
-    """
-    Asynchronous function to generate questions using the given context.
-    """
+def generate_questions(llm, section, num_questions=1):
 
     question_generation_prompt = ChatPromptTemplate.from_template(
         QUESTION_GENERATION_TEMPLATE, partial_variables={"num_questions": num_questions}
     )
+
     question_generation_chain = question_generation_prompt | llm
 
-    response = await question_generation_chain.ainvoke(
-        {"context": section["documents"][0]}
-    )
-    question_re = re.compile(r"\[Question \d+\]\nQuestion: (.*)\nAnswer: (.*)\n?")
-    q_n_a = question_re.findall(response.content)
+    response = question_generation_chain.invoke({"context": section["documents"][0]})
 
+    question_re = re.compile(
+        r"\[Question \d+\]\s+Question:\s*(.*?)\s+Answer:\s*(.*?)(?=\s*\[Question \d+\]|\Z)"
+    )
+    q_n_a = question_re.findall(response.content)
     result = []
     for q, a in q_n_a:
         result.append(
             {
                 "ref_doc_id": section["metadatas"][0]["element_id"],
-                "question": q.strip(),
-                "answer": a.strip(),
+                "question": q,
+                "answer": a,
                 "context": section["documents"],
             }
         )
+
     return result
 
 
-def run_question_generation(llm, vector_store, num_questions=3):
-    """
-    Synchronous function to generate questions for selected documents.
-    """
+def run_question_generation(llm, vector_store, num_questions=50):
     doc_ids = vector_store.get()["ids"]
     selected_doc_ids = random.sample(doc_ids, num_questions)
-
-    tasks = [
-        generate_questions(
-            llm,
-            vector_store.get(doc_id),
-            num_questions=num_questions,
-        )
-        for doc_id in selected_doc_ids
-        if vector_store.get(doc_id)["metadatas"][0]["category"] == "NarrativeText"
-    ]
-    event_loop = asyncio.get_event_loop()
-    results = event_loop.run_until_complete(asyncio.gather(*tasks))
-
+    results = []
+    for doc_id in selected_doc_ids:
+        if vector_store.get(doc_id)["metadatas"][0]["category"] == "NarrativeText":
+            # print("yes")
+            results.append(
+                generate_questions(
+                    llm,
+                    vector_store.get(doc_id),
+                    num_questions=2,
+                )
+            )
+    # print(results)
     return results
+
+
+# async def generate_questions(llm, section, num_questions=1):
+#     """
+#     Asynchronous function to generate questions using the given context.
+#     """
+
+#     question_generation_prompt = ChatPromptTemplate.from_template(
+#         QUESTION_GENERATION_TEMPLATE, partial_variables={"num_questions": num_questions}
+#     )
+#     question_generation_chain = question_generation_prompt | llm
+
+#     response = await question_generation_chain.ainvoke(
+#         {"context": section["documents"][0]}
+#     )
+#     question_re = re.compile(r"\[Question \d+\]\nQuestion: (.*)\nAnswer: (.*)\n?")
+#     q_n_a = question_re.findall(response.content)
+
+#     result = []
+#     for q, a in q_n_a:
+#         result.append(
+#             {
+#                 "ref_doc_id": section["metadatas"][0]["element_id"],
+#                 "question": q.strip(),
+#                 "answer": a.strip(),
+#                 "context": section["documents"],
+#             }
+#         )
+#     return result
+
+
+# def run_question_generation(llm, vector_store, num_questions=100):
+#     """
+#     Synchronous function to generate questions for selected documents.
+#     """
+#     doc_ids = vector_store.get()["ids"]
+#     selected_doc_ids = random.sample(doc_ids, num_questions)
+
+#     tasks = [
+#         generate_questions(
+#             llm,
+#             vector_store.get(doc_id),
+#             num_questions=2,
+#         )
+#         for doc_id in selected_doc_ids
+#         if vector_store.get(doc_id)["metadatas"][0]["category"] == "NarrativeText"
+#     ]
+#     event_loop = asyncio.get_event_loop()
+#     results = event_loop.run_until_complete(asyncio.gather(*tasks))
+
+#     return results
 
 
 import argparse
@@ -121,8 +167,8 @@ def main():
     parser.add_argument(
         "--num_questions",
         type=int,
-        default=3,
-        help="Number of question/answer psirs to generate",
+        default=100,
+        help="Number of question/answer pairs to generate",
     )
     parser.add_argument(
         "--persist_directory",
@@ -155,11 +201,11 @@ def main():
         args.persist_directory, args.collection_name, embeddings
     )
 
-    cohere_model = "command-r-plus-08-2024"
-    llm = ChatCohere(model=cohere_model, temperature=0)
-    # llm = ChatOpenAI(
-    #     model="gpt-4o", temperature=0, max_tokens=None, timeout=None, max_retries=2
-    # )
+    # cohere_model = "command-r-plus-08-2024"
+    # llm = ChatCohere(model=cohere_model, temperature=0)
+    llm = ChatOpenAI(
+        model="gpt-4o", temperature=0, max_tokens=None, timeout=None, max_retries=2
+    )
 
     # Generate questions
     QA_pairs = run_question_generation(llm, vector_store, args.num_questions)
