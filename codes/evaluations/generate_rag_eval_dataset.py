@@ -23,7 +23,7 @@ def get_rag_answers(chain, query):
         return ("ERROR: Unable to process", "")
 
 
-def main(input_file, index_path, output_file):
+def main(input_file, index_path, collection_name, output_file):
     try:
         # Load evaluation data
         logging.info(f"Loading evaluation data from {input_file}...")
@@ -35,8 +35,10 @@ def main(input_file, index_path, output_file):
 
     try:
         # Initialize the RAG chain
-        logging.info(f"Setting up RAG chain with index path {index_path}...")
-        chain = setup_rag_chain(index_path)
+        logging.info(
+            f"Setting up RAG chain with index path {index_path} and collection {collection_name}..."
+        )
+        chain = setup_rag_chain(index_path, collection_name)
         logging.info("RAG chain setup successfully.")
     except Exception as e:
         logging.error(f"Failed to set up RAG chain. Error: {e}")
@@ -98,6 +100,14 @@ if __name__ == "__main__":
         default="./chroma_index",
         help="Path to the Chroma index directory.",
     )
+
+    parser.add_argument(
+        "--collection_name",
+        type=str,
+        default="class_info",
+        help="Path to the Chroma index directory.",
+    )
+
     parser.add_argument(
         "--output_file",
         type=str,
@@ -107,5 +117,5 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     logging.info("Starting RAG evaluation script...")
-    main(args.input_file, args.index_path, args.output_file)
+    main(args.input_file, args.index_path, args.collection_name, args.output_file)
     logging.info("RAG evaluation script completed.")
