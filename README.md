@@ -25,23 +25,25 @@ You’ll need a Cohere API key to run this application.
 
 ```CO_API_KEY="your_cohere_api_key_here"```
 
-
-
 ### 3. Chroma Index Placement
 
-Place the chroma_index folder (containing your Chroma index files) in the root directory of the project. This index is essential for the RAG-based retrieval functionality.
+Place the chroma_index_2 folder (containing your Chroma index files) in the root directory of the project. This index is essential for the RAG-based retrieval functionality.
+
+Drive Link: https://drive.google.com/drive/folders/13Hdh5O7NsI52bBu3gGR0lMq-IIX5eTTP?usp=sharing
 
 ### 4. Running the Application
 
-Once the environment is set up, API key configured, and Chroma index added, you can start using the RAG chain.
+Once the environment is set up, API key configured, and Chroma index added, you can start using the RAG chain. Go to your project root directory and run the streamlit app!
 
-```python
-from rag.rag_chains import setup_rag_chain
-
-rag_chain = setup_rag_chain()
-rag_chain.invoke("What is this class about?")
+```bash
+    streamlit run main.py
 ```
 If you encounter any issues during setup or runtime, please reach out for support.
+
+
+### 5. Running Indexing and Evaluation Experiments
+
+In the `experiments` folder, you can find notebooks to the indexing and RAGAS evaluations. The notebook is well-documented and is self explanantory.
 
 ### Additional Notes
 

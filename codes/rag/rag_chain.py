@@ -49,14 +49,14 @@ def initialize_retriever(persist_directory, collection_name, embeddings, llm=Non
     semantic_retriever = vector_store.as_retriever(
         search_type="mmr",
         search_kwargs={
-            "k": 7,
-            "fetch_k": 15,
+            "k": 5,
+            "fetch_k": 10,
             "filter": {"category": {"$eq": "NarrativeText"}},
         },
     )
 
     bm_25 = BM25Retriever.from_texts(
-        vector_store.get()["documents"], metadatas=vector_store.get()["metadatas"], k=7
+        vector_store.get()["documents"], metadatas=vector_store.get()["metadatas"], k=5
     )
     ensemble_retriever = EnsembleRetriever(
         retrievers=[semantic_retriever, bm_25],
@@ -126,10 +126,10 @@ def setup_rag_chain(
     load_dotenv()
     embeddings = load_embeddings(embedding_model)
 
-    # llm = ChatCohere(model=cohere_model, temperature=0)
-    llm = ChatOpenAI(
-        model=openai_model, temperature=0, max_tokens=None, timeout=None, max_retries=2
-    )
+    llm = ChatCohere(model=cohere_model, temperature=0, cache=False)
+    # llm = ChatOpenAI(
+    #     model=openai_model, temperature=0, max_tokens=None, timeout=None, max_retries=2
+    # )
 
     ensemble_retriever = initialize_retriever(
         persist_directory, collection_name, embeddings, llm

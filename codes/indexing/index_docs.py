@@ -43,11 +43,11 @@ def index_documents(root_dir, extensions, persist_directory):
     embeddings = load_embeddings(model_name)
 
     # Initialize Chroma vector store with persistence enabled
-    vector_store = get_vector_store(persist_directory, "class_info", embeddings)
+    vector_store = get_vector_store(persist_directory, "class_info_2", embeddings)
 
     # Define chunk size and overlap
-    chunk_size = 1000
-    chunk_overlap = 100
+    chunk_size = 512
+    chunk_overlap = 50
     text_splitter = RecursiveCharacterTextSplitter(
         chunk_size=chunk_size, chunk_overlap=chunk_overlap
     )
